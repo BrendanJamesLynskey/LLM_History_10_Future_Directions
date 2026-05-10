@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM History 10 &mdash; Future Directions</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0a; --bg-card: #0d1117; --bg-code: #161b22;
+            --text-primary: #e6edf3; --text-secondary: #8b949e;
+            --accent: #A371F7; --accent-dim: #A371F744; --accent-glow: #A371F733;
+            --accent-2: #FF7B72; --accent-3: #F0A726; --accent-4: #3FB950;
+            --border: #21262d;
+            --font-display: 'Space Grotesk', sans-serif;
+            --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+            --font-body: 'Inter', sans-serif;
+            --max-width: 900px;
+        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body { background: var(--bg-primary); color: var(--text-primary); font-family: var(--font-body); font-size: 17px; line-height: 1.7; overflow-x: hidden; }
+        .hero { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 2rem 1.5rem; text-align: center; position: relative; }
+        .hero::before { content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 700px; height: 600px; background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%); pointer-events: none; z-index: 0; }
+        .hero > * { position: relative; z-index: 1; }
+        .series-label { font-family: var(--font-mono); font-size: 0.85rem; color: var(--accent); letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 1rem; }
+        .hero h1 { font-family: var(--font-display); font-size: clamp(2rem, 5vw, 3.2rem); font-weight: 700; color: var(--text-primary); line-height: 1.2; margin-bottom: 1rem; }
+        .hero h1 .accent { color: var(--accent); }
+        .hero .subtitle { font-size: 1.1rem; color: var(--text-secondary); max-width: 640px; margin-bottom: 2rem; }
+        .tags { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; margin-bottom: 2.5rem; }
+        .tag { font-family: var(--font-mono); font-size: 0.75rem; padding: 0.25rem 0.75rem; border-radius: 999px; border: 1px solid var(--accent); color: var(--accent); background: var(--accent-dim); white-space: nowrap; }
+        .tag.r { border-color: var(--accent-2); color: var(--accent-2); background: rgba(255,123,114,0.10); }
+        .tag.y { border-color: var(--accent-3); color: var(--accent-3); background: rgba(240,167,38,0.10); }
+        .tag.g { border-color: var(--accent-4); color: var(--accent-4); background: rgba(63,185,80,0.10); }
+        .pipeline { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.25rem; margin-bottom: 1rem; max-width: var(--max-width); }
+        .pipeline-step { font-family: var(--font-mono); font-size: 0.7rem; padding: 0.3rem 0.7rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: 4px; color: var(--text-secondary); white-space: nowrap; }
+        .pipeline-arrow { color: var(--accent); font-size: 0.9rem; font-weight: 700; }
+        .slide { min-height: 100vh; max-width: var(--max-width); margin: 0 auto; padding: 4rem 1.5rem; position: relative; display: flex; flex-direction: column; justify-content: center; }
+        .slide-number { font-family: var(--font-display); font-size: 5rem; font-weight: 700; color: var(--accent-dim); position: absolute; top: 2rem; right: 1.5rem; line-height: 1; user-select: none; }
+        .slide h2 { font-family: var(--font-display); font-size: 1.9rem; font-weight: 700; color: var(--accent); margin-bottom: 1.5rem; line-height: 1.25; }
+        .slide h3 { font-family: var(--font-display); font-size: 1.3rem; font-weight: 600; color: var(--text-primary); margin-top: 1.5rem; margin-bottom: 0.75rem; }
+        .slide p { margin-bottom: 1rem; color: var(--text-secondary); }
+        .slide p strong { color: var(--text-primary); }
+        .slide ul, .slide ol { margin-bottom: 1rem; padding-left: 1.5rem; color: var(--text-secondary); }
+        .slide li { margin-bottom: 0.4rem; }
+        .slide li strong { color: var(--text-primary); }
+        .slide code { font-family: var(--font-mono); font-size: 0.88em; background: var(--bg-code); padding: 0.1rem 0.35rem; border-radius: 3px; color: var(--accent); }
+        .table-wrap { overflow-x: auto; margin: 1.25rem 0; border-radius: 8px; border: 1px solid var(--border); }
+        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        th { background: var(--bg-code); color: var(--accent); font-weight: 600; text-align: left; padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); font-family: var(--font-display); white-space: nowrap; }
+        td { padding: 0.6rem 1rem; border-bottom: 1px solid var(--border); color: var(--text-secondary); }
+        tr:last-child td { border-bottom: none; }
+        tr:nth-child(even) td { background: rgba(13, 17, 23, 0.5); }
+        .diagram-grid { display: grid; gap: 0.75rem; margin: 1.5rem 0; padding: 1.5rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; }
+        .diagram-grid.cols-2 { grid-template-columns: 1fr 1fr; }
+        .diagram-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+        .diagram-panel { padding: 1rem; background: var(--bg-code); border: 1px solid var(--border); border-radius: 6px; }
+        .diagram-panel.accent-border { border-left: 3px solid var(--accent); }
+        .diagram-panel.r { border-left: 3px solid var(--accent-2); }
+        .diagram-panel.y { border-left: 3px solid var(--accent-3); }
+        .diagram-panel.g { border-left: 3px solid var(--accent-4); }
+        .diagram-panel h4 { font-family: var(--font-display); font-size: 1rem; color: var(--accent); margin-bottom: 0.5rem; }
+        .diagram-panel.r h4 { color: var(--accent-2); }
+        .diagram-panel.y h4 { color: var(--accent-3); }
+        .diagram-panel.g h4 { color: var(--accent-4); }
+        .diagram-panel p, .diagram-panel ul { font-size: 0.9rem; }
+        .callout { background: var(--bg-card); border-left: 3px solid var(--accent); border-radius: 0 8px 8px 0; padding: 1rem 1.25rem; margin: 1.25rem 0; }
+        .callout p { margin-bottom: 0; }
+        .callout .callout-label { font-family: var(--font-mono); font-size: 0.75rem; color: var(--accent); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.3rem; }
+        .callout.r { border-left-color: var(--accent-2); } .callout.r .callout-label { color: var(--accent-2); }
+        .callout.y { border-left-color: var(--accent-3); } .callout.y .callout-label { color: var(--accent-3); }
+        .callout.g { border-left-color: var(--accent-4); } .callout.g .callout-label { color: var(--accent-4); }
+        .quote { font-family: var(--font-display); font-size: 1.15rem; font-style: italic; color: var(--text-primary); padding: 1rem 1.5rem; border-left: 3px solid var(--accent); background: var(--bg-card); margin: 1.25rem 0; border-radius: 0 8px 8px 0; }
+        .quote .attr { display: block; margin-top: 0.5rem; font-style: normal; font-size: 0.85rem; color: var(--text-secondary); font-family: var(--font-mono); }
+        .contents-list { list-style: none; padding-left: 0; counter-reset: contents; }
+        .contents-list li { counter-increment: contents; padding: 0.6rem 0; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 1rem; }
+        .contents-list li:last-child { border-bottom: none; }
+        .contents-list li::before { content: counter(contents, decimal-leading-zero); font-family: var(--font-mono); font-size: 0.85rem; color: var(--accent); min-width: 2rem; }
+        .contents-list a { color: var(--text-primary); text-decoration: none; }
+        .contents-list a:hover { color: var(--accent); }
+        .footer { text-align: center; padding: 3rem 1.5rem; color: var(--text-secondary); font-size: 0.85rem; border-top: 1px solid var(--border); max-width: var(--max-width); margin: 0 auto; }
+        .footer a { color: var(--accent); text-decoration: none; }
+        .footer a:hover { text-decoration: underline; }
+        @media (max-width: 640px) {
+            .slide { padding: 3rem 1rem; min-height: auto; }
+            .slide-number { font-size: 3rem; top: 1.5rem; right: 1rem; }
+            .slide h2 { font-size: 1.5rem; }
+            .diagram-grid.cols-2, .diagram-grid.cols-3 { grid-template-columns: 1fr; }
+            .hero h1 { font-size: 1.8rem; }
+            table { font-size: 0.78rem; }
+        }
+    </style>
+</head>
+<body>
+
+<header class="hero">
+    <div class="series-label">LLM History Series &mdash; Presentation 10</div>
+    <h1><span class="accent">Future Directions</span> &mdash; Where the Frontier is Heading</h1>
+    <p class="subtitle">The forecast deck. Reading the technical and institutional patterns from decks 02&ndash;09 and projecting them forward. Will date faster than the rest of the series, and that is the point &mdash; the value is in the framework, not the predictions.</p>
+
+    <div class="tags">
+        <span class="tag y">Scaling laws debate</span><span class="tag y">Test-time compute</span>
+        <span class="tag g">Agents</span><span class="tag g">World models</span>
+        <span class="tag r">Alignment</span><span class="tag r">Regulation</span>
+        <span class="tag">AGI timelines</span>
+    </div>
+
+    <div class="pipeline">
+        <span class="pipeline-step">2026 baseline</span>
+        <span class="pipeline-arrow">&rarr;</span>
+        <span class="pipeline-step">Capability axes</span>
+        <span class="pipeline-arrow">&rarr;</span>
+        <span class="pipeline-step">Structural changes</span>
+        <span class="pipeline-arrow">&rarr;</span>
+        <span class="pipeline-step">Open questions</span>
+        <span class="pipeline-arrow">&rarr;</span>
+        <span class="pipeline-step">Honest forecast</span>
+    </div>
+</header>
+
+<section class="slide" id="slide-00">
+    <div class="slide-number">00</div>
+    <h2>What This Deck Covers</h2>
+    <p>The forward view. Less narrative, more structural &mdash; reading the patterns from the previous nine decks and projecting forward where they continue, where they break, and where the genuine open questions are.</p>
+    <ul class="contents-list">
+        <li><a href="#slide-01">The Caveat &mdash; Forecasting in a Field This Fast</a></li>
+        <li><a href="#slide-02">Where Capability is Heading</a></li>
+        <li><a href="#slide-03">The Scaling Laws Debate &mdash; Continue or Plateau?</a></li>
+        <li><a href="#slide-04">Test-Time Compute and Reasoning Models</a></li>
+        <li><a href="#slide-05">Agents and Tool Use</a></li>
+        <li><a href="#slide-06">World Models and Embodied AI</a></li>
+        <li><a href="#slide-07">Multimodality and the Single-Model Future</a></li>
+        <li><a href="#slide-08">Open Weights vs Closed &mdash; the Live Argument</a></li>
+        <li><a href="#slide-09">The Alignment Question</a></li>
+        <li><a href="#slide-10">The Regulatory Landscape</a></li>
+        <li><a href="#slide-11">AGI Timelines &mdash; Honest Disagreement</a></li>
+        <li><a href="#slide-12">Cheat Sheet</a></li>
+    </ul>
+</section>
+
+<section class="slide" id="slide-01">
+    <div class="slide-number">01</div>
+    <h2>The Caveat &mdash; Forecasting in a Field This Fast</h2>
+    <p>It is worth saying plainly: nobody who has tried to forecast LLM capability over the last five years has gotten it right. Not the lab CEOs, not the scaling-laws authors, not the journalists, not the academic critics. The 2020 GPT-3 paper was a surprise to most of the field; ChatGPT was a surprise to most of OpenAI; the o-series was a surprise to many people inside the lab that built it. The base rate for confident frontier-AI predictions surviving twelve months intact is unimpressive.</p>
+
+    <p>The point of this deck is therefore <strong>not</strong> to predict specific things. It is to lay out the axes along which the field could move and, where evidence supports it, to indicate which way the wind is blowing on each axis. A reader returning to this deck in two years should be able to score the framework, not the predictions.</p>
+
+    <div class="callout">
+        <div class="callout-label">A useful prior</div>
+        <p>Take any two-year-old confident forecast about AI capability. The accurate predictions tend to be ones that named a structural pattern (scaling continues, agents will arrive, frontier labs will consolidate). The inaccurate ones tend to be ones that named specific capability thresholds and timelines. This deck mostly does the first kind.</p>
+    </div>
+</section>
+
+<section class="slide" id="slide-02">
+    <div class="slide-number">02</div>
+    <h2>Where Capability is Heading</h2>
+    <p>Five capability axes are visibly active in 2026. Each is in a different stage of maturity.</p>
+
+    <div class="table-wrap">
+    <table>
+        <thead><tr><th>Axis</th><th>State 2026</th><th>What is plausibly next</th></tr></thead>
+        <tbody>
+            <tr><td>Reasoning depth</td><td>o-series-style RL on chains of thought is mature; PhD-level on hard math/science benchmarks for top tier.</td><td>Reasoning extends to longer-horizon scientific problems. Math research, code-base scale engineering, drug-discovery pipelines.</td></tr>
+            <tr><td>Agentic action</td><td>Computer Use / Operator / Mariner work for ~tens of minutes of useful action; reliability still lossy.</td><td>Day-long agent tasks; multi-step economic transactions; agent-to-agent protocols.</td></tr>
+            <tr><td>Multimodality</td><td>Native image, audio, video in/out; Sora-class generation; real-time voice agents.</td><td>Embodied real-world action (robotics-foundation-model work). Better cross-modal reasoning.</td></tr>
+            <tr><td>Long context</td><td>1&ndash;2 M tokens at frontier; 4 M+ at MiniMax. Quality degrades past ~200k.</td><td>Memory-style architectures (state-space, retrieval, learned memory). Quality at 10 M+ tokens.</td></tr>
+            <tr><td>Specialised expertise</td><td>Better-than-PhD on individual benchmarks; uneven by domain.</td><td>Reliable expert-level help across most knowledge domains. Failure modes localised and predictable.</td></tr>
+        </tbody>
+    </table>
+    </div>
+
+    <div class="callout y">
+        <div class="callout-label">A pattern that the historical decks support</div>
+        <p>Each of these axes has gone through a 2&ndash;3 year period from "researchers prove the concept" to "shipped at frontier scale". Reasoning was 2022&ndash;2024. Agents were 2023&ndash;2025. Long context was 2023&ndash;2025. Robotics-foundation-models look like they are mid-cycle: 2024&ndash;2026. The next 18 months are the period in which the agentic-action axis goes from interesting to economically transformational.</p>
+    </div>
+</section>
+
+<section class="slide" id="slide-03">
+    <div class="slide-number">03</div>
+    <h2>The Scaling Laws Debate &mdash; Continue or Plateau?</h2>
+    <p>For most of 2020&ndash;2024 the working assumption at the frontier was: <strong>more compute, more parameters, more data, lower loss, better capability.</strong> By late 2024 several senior researchers &mdash; including Ilya Sutskever in his post-OpenAI public statements and Dario Amodei in interviews &mdash; have publicly observed that pretraining-only scaling appears to be running into diminishing returns on raw next-token loss.</p>
+
+    <div class="diagram-grid cols-2">
+        <div class="diagram-panel accent-border">
+            <h4>The "scaling continues" argument</h4>
+            <ul>
+                <li>Loss has continued to fall, even if the marginal gains per dollar have shrunk.</li>
+                <li>Capability metrics often jump non-linearly when scale crosses a threshold.</li>
+                <li>Test-time compute and post-training (RLHF, RLAIF, RL on CoT) provide new scaling axes.</li>
+                <li>Multimodal and synthetic-data extensions provide new data axes.</li>
+            </ul>
+        </div>
+        <div class="diagram-panel y">
+            <h4>The "plateau" argument</h4>
+            <ul>
+                <li>Pretraining-loss reduction per training-compute dollar is sub-power-law in 2024 data points.</li>
+                <li>High-quality natural-text data is finite and approaching exhaustion.</li>
+                <li>The gains since GPT-4 to GPT-5 are large in capability but smaller per dollar than the 3 &rarr; 4 jump.</li>
+                <li>The next wave of capability looks like it comes from RL/agents/test-time compute, not pretraining.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="callout">
+        <div class="callout-label">Where this lands</div>
+        <p>The honest read is: both sides are partly right. <strong>Pretraining-only scaling has clearly diminished in marginal value.</strong> That is settled. <strong>Total scaling &mdash; pretraining plus post-training plus inference-time compute plus multimodal plus tool use &mdash; is still climbing.</strong> The right framing for the next five years is probably "scaling on multiple new axes simultaneously", rather than "is the scaling-laws thesis correct or not".</p>
+    </div>
+</section>
+
+<section class="slide" id="slide-04">
+    <div class="slide-number">04</div>
+    <h2>Test-Time Compute and Reasoning Models</h2>
+    <p>The o-series, R1, Gemini Thinking, Claude extended-thinking and various other 2024&ndash;25 reasoning models have established that inference-time compute is a real second axis of capability. This changes several things:</p>
+
+    <div class="diagram-grid cols-2">
+        <div class="diagram-panel accent-border">
+            <h4>What the technique gives you</h4>
+            <ul>
+                <li>State-of-the-art on math, science, coding, planning at single-step pricing 2&ndash;100x training cost &mdash; but per-query.</li>
+                <li>The ability to spend $0.01 on simple queries and $5 on hard ones with the same model.</li>
+                <li>RL on verifiable rewards (correctness on math/code) generalises in ways most people had not expected.</li>
+                <li>A research direction with most of its payoff still to come; smaller labs can compete here on technique rather than on scale.</li>
+            </ul>
+        </div>
+        <div class="diagram-panel y">
+            <h4>What it pushes</h4>
+            <ul>
+                <li>Pricing models reorganise around "compute spent per query" not "tokens per request".</li>
+                <li>Specialised reasoning sub-models for specific verifiable domains (math, code, formal verification).</li>
+                <li>Long-horizon agents that can spend hours on a single task.</li>
+                <li>The performance of small open-weight models distilled from large reasoning models (the R1-distill family).</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="callout y">
+        <div class="callout-label">A specific forecast</div>
+        <p>The most likely next step on this axis is <strong>reasoning across very long horizons by chaining many smaller RL'd reasoning passes</strong>, with intermediate caching, search, and verification. The technique's home base will probably extend from math/code into more open-ended scientific research within two to three years. Whether it generalises to fully open-ended creative or strategic tasks is genuinely contested.</p>
+    </div>
+</section>
+
+<section class="slide" id="slide-05">
+    <div class="slide-number">05</div>
+    <h2>Agents and Tool Use</h2>
+    <p>Through 2025 the agent-product story moved from "interesting demos" to "shipped frontier products with real revenue lines". Cursor (and Anysphere generally), Claude Code, Operator, Project Mariner, the Devin/Cognition line, the Replit agent, the agent SDKs at every frontier lab.</p>
+
+    <div class="diagram-grid cols-3">
+        <div class="diagram-panel accent-border">
+            <h4>What works in 2026</h4>
+            <ul>
+                <li>Coding agents at the function-and-file level (Claude Code, Cursor, Devin).</li>
+                <li>Browser agents for tens of minutes of structured tasks.</li>
+                <li>Tool-augmented assistants in enterprise contexts (Salesforce, Microsoft, Atlassian).</li>
+                <li>Voice and Slack-bot agents in operations contexts.</li>
+            </ul>
+        </div>
+        <div class="diagram-panel y">
+            <h4>What is still hard</h4>
+            <ul>
+                <li>Multi-hour autonomous tasks in unstructured environments.</li>
+                <li>Long-running open-ended research projects.</li>
+                <li>Fully autonomous agent-to-agent commerce.</li>
+                <li>Robust handling of unexpected failure modes mid-task.</li>
+            </ul>
+        </div>
+        <div class="diagram-panel g">
+            <h4>What is plausibly next</h4>
+            <ul>
+                <li>Day-scale autonomous tasks with checkpointing and human review at strategic decisions.</li>
+                <li>MCP-style protocol consolidation (a few standards win).</li>
+                <li>Agent-marketplaces and agent-to-agent payments.</li>
+                <li>Operator licensing / agent-action insurance as commercial categories.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="callout">
+        <div class="callout-label">A useful pattern</div>
+        <p>The most-shipped agent products are ones that work in environments with strong feedback signal: code (compilers, tests, linters), structured forms (web pages with predictable DOM), defined workflows (data ETL, scheduling). Open-ended agent tasks where no easy verifier exists remain hard. Most of the next two years of agent capability gains will come from labs figuring out how to engineer good feedback signals for harder domains, not from raw model capability.</p>
+    </div>
+</section>
+
+<section class="slide" id="slide-06">
+    <div class="slide-number">06</div>
+    <h2>World Models and Embodied AI</h2>
+    <p>Yann LeCun's JEPA programme, Demis Hassabis's emphasis on "world models" as the next frontier, the Pi/Physical Intelligence robotics-foundation-model work, Sergey Levine's Berkeley group, and a host of related research lines all share a thesis: <strong>language models are the prior; embodied/world-model agents are the next research target.</strong></p>
+
+    <div class="diagram-grid cols-2">
+        <div class="diagram-panel accent-border">
+            <h4>The thesis in one paragraph</h4>
+            <p>An LLM trained only on text knows about the world only secondhand. To act usefully in the real world (robotics, autonomous vehicles, scientific experimentation), models need to learn the dynamics of physical reality &mdash; not just descriptions of it. World-model approaches train on video and sensor streams, predict future states, and use that prediction as the substrate for planning and action. Whether they fully replace LLMs or extend them is contested.</p>
+        </div>
+        <div class="diagram-panel y">
+            <h4>Where the work is happening</h4>
+            <ul>
+                <li>Meta's V-JEPA / I-JEPA line (LeCun's architecture).</li>
+                <li>Pi/Physical Intelligence (Berkeley/Google diaspora).</li>
+                <li>Google DeepMind robotics (RT-1/2, Gemini Robotics).</li>
+                <li>NVIDIA's GR00T humanoid programme.</li>
+                <li>Various Tesla / Waymo / Wayve autonomous-driving lines.</li>
+                <li>Sora and Veo as side-effects (video models that learn physics implicitly).</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="callout y">
+        <div class="callout-label">An honest forecast</div>
+        <p>Robotics foundation models will produce a step change in what humanoid and manipulator robots can do over the next 2&ndash;5 years; the question is whether that step change comes from "world models in LeCun's sense" or from "transformer-style policies trained on enough video and demonstration data". The technical bet behind world-model purism is that the latter approach hits a ceiling that the former does not. The empirical evidence is genuinely mixed. The most important new datasets and reward-shaping experiments are still ahead.</p>
+    </div>
+</section>
+
+<section class="slide" id="slide-07">
+    <div class="slide-number">07</div>
+    <h2>Multimodality and the Single-Model Future</h2>
+    <p>Through 2025 every western frontier lab and the leading Chinese labs have released models that are multimodal natively rather than as bolt-ons. Image, audio, video, and code all flow through the same architecture. The "single model that does everything" arc is largely complete on the input side.</p>
+
+    <div class="diagram-grid cols-2">
+        <div class="diagram-panel accent-border">
+            <h4>What is consolidated</h4>
+            <ul>
+                <li>Native vision input is table stakes (GPT-4o, Claude, Gemini, Llama 4, Qwen-VL).</li>
+                <li>Real-time voice in / voice out at near-human latency.</li>
+                <li>Long-context document and image understanding in a single inference.</li>
+                <li>Video understanding (frame-by-frame reasoning over hours of input).</li>
+            </ul>
+        </div>
+        <div class="diagram-panel y">
+            <h4>What is still moving</h4>
+            <ul>
+                <li>Native generation across all modalities (Sora-style is current best, still imperfect).</li>
+                <li>Cross-modal reasoning fidelity ("the audio says X, the video says Y, what can you infer").</li>
+                <li>Multimodal agents (action over multimodal observation streams).</li>
+                <li>3D / spatial understanding (a much harder modality than 2D image).</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="callout">
+        <div class="callout-label">A pattern</div>
+        <p>Each new modality has gone through roughly the same arc: novelty &rarr; bolt-on adapter &rarr; dedicated subnetwork &rarr; native integration in pretraining. Image was 2021&ndash;2024. Audio was 2022&ndash;2024. Video is 2023&ndash;2026. Action (robotics) is 2024&ndash;2027 on present trajectory. The future is not <em>more</em> modalities; it is <em>better-integrated</em> existing ones, with action being the main new addition.</p>
+    </div>
+</section>
+
+<section class="slide" id="slide-08">
+    <div class="slide-number">08</div>
+    <h2>Open Weights vs Closed &mdash; the Live Argument</h2>
+    <p>The open-vs-closed debate is one of the field's persistent arguments, covered repeatedly in the previous decks. In 2026 the equilibrium looks roughly like:</p>
+
+    <div class="diagram-grid cols-2">
+        <div class="diagram-panel accent-border">
+            <h4>The closed-weight frontier</h4>
+            <ul>
+                <li>OpenAI, Anthropic, Google DeepMind keep flagship weights closed.</li>
+                <li>API access plus cloud-marketplace distribution.</li>
+                <li>Strong commercial moats; clear safety-research story.</li>
+                <li>~6&ndash;12 month lead on raw frontier capability.</li>
+            </ul>
+        </div>
+        <div class="diagram-panel y">
+            <h4>The open-weight frontier</h4>
+            <ul>
+                <li>Meta Llama, Mistral, DeepSeek, Qwen, plus an active long tail.</li>
+                <li>Hugging Face / Together / Ollama distribution.</li>
+                <li>Stronger researcher/community footprint; weaker enterprise sales motion.</li>
+                <li>~6&ndash;12 months behind the closed frontier on raw capability, often ahead on specific axes.</li>
+            </ul>
+        </div>
+    </div>
+
+    <h3>The questions for the next two years</h3>
+    <ul>
+        <li>Does the closed-weight frontier extend its lead, hold steady, or shrink as algorithmic efficiency techniques (MoE, distillation, RL on smaller models) propagate?</li>
+        <li>Does any frontier lab close its previously-open-weight strategy when the cost of the next model becomes large enough that internal economics push back? (Mistral has partially done this with Large; others may follow.)</li>
+        <li>Does any closed-weight lab open weights of older models systematically as a competitive lever?</li>
+        <li>How does the regulatory framework (EU AI Act, US export controls, possible UK rules) treat open-weight releases of frontier-capability models?</li>
+    </ul>
+
+    <div class="callout y">
+        <div class="callout-label">An honest forecast</div>
+        <p>The probable equilibrium for 2027 is: <strong>two parallel frontiers, one closed and one open, with a 6&ndash;12 month gap that does not widen but does not close either.</strong> The most strategically active question is whether any of the regulatory regimes treats the open-weight frontier as itself a regulated artefact &mdash; the EU AI Act has provisions that could be read this way, and the political pressure depends on how the field's safety story unfolds.</p>
+    </div>
+</section>
+
+<section class="slide" id="slide-09">
+    <div class="slide-number">09</div>
+    <h2>The Alignment Question</h2>
+    <p>Alignment research in 2026 is in a strange state. The capability-relevant techniques (RLHF, constitutional AI, RLAIF, deliberative alignment, debate, scalable oversight) all work to varying degrees on present models. The deeper question &mdash; <em>do these techniques generalise to a model substantially smarter than the humans designing them?</em> &mdash; has not been tested empirically because the model substantially smarter than the humans does not yet exist (or is not yet detected).</p>
+
+    <div class="diagram-grid cols-2">
+        <div class="diagram-panel accent-border">
+            <h4>What is going well</h4>
+            <ul>
+                <li>Mechanistic interpretability has moved from interesting toy results to features-on-frontier-models. The Anthropic 2024&ndash;25 work is genuinely promising.</li>
+                <li>Public RSPs / FSFs at top labs commit specific capability thresholds to specific safeguards.</li>
+                <li>Frontier red-teaming infrastructure exists (UK AISI, US AISI, METR, Apollo Research).</li>
+                <li>Deceptive-alignment research has moved from speculation to empirical &mdash; demonstrations on toy models exist; the question is whether they scale.</li>
+            </ul>
+        </div>
+        <div class="diagram-panel r">
+            <h4>What is still alarming</h4>
+            <ul>
+                <li>None of the techniques have been validated on models substantially smarter than their designers, because such models do not yet exist (we think).</li>
+                <li>Alignment teams at the top labs have lost senior staff repeatedly (Leike, Christiano, Sutskever).</li>
+                <li>Commercial pressure compresses safety timelines.</li>
+                <li>The institutions designed to enforce safety commitments are still nascent and untested.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="quote">
+        We have an unusual amount of empirical evidence that the techniques work on the systems we currently have. We have basically no empirical evidence about whether they will work on the systems we are about to build.
+        <span class="attr">&mdash; A common framing among senior alignment researchers in late 2025. Variants of this thought have been articulated by Bengio, Christiano, Olah and others.</span>
+    </div>
+</section>
+
+<section class="slide" id="slide-10">
+    <div class="slide-number">10</div>
+    <h2>The Regulatory Landscape</h2>
+    <p>The regulatory side of LLM history in 2026 is structured by three jurisdictions. Each has settled into a distinct posture.</p>
+
+    <div class="diagram-grid cols-3">
+        <div class="diagram-panel accent-border">
+            <h4>European Union &mdash; EU AI Act</h4>
+            <p>Passed 2024, fully in force 2026. Risk-tiered framework with the strictest rules on "high-risk" applications and general-purpose AI models above a compute threshold. Includes pre-deployment evaluation, transparency on training data, copyright provisions, and post-market monitoring. Most prescriptive of the three regimes; most stable.</p>
+        </div>
+        <div class="diagram-panel y">
+            <h4>United States &mdash; sectoral plus executive</h4>
+            <p>No comprehensive federal AI law as of 2026. The 2023 Biden Executive Order set safety-evaluation requirements and was partially rolled back in 2025. The US AI Safety Institute (housed at NIST) does voluntary frontier-model testing. Sectoral rules (FDA, FTC, SEC) cover specific use cases. Most flexible regime; least stable.</p>
+        </div>
+        <div class="diagram-panel g">
+            <h4>United Kingdom &mdash; AISI plus light-touch</h4>
+            <p>UK AI Safety Institute (founded Nov 2023) does pre-deployment frontier-model evaluations under voluntary agreements with major labs. Aims to be the most technically credible evaluation body. No comprehensive AI law; instead empowers existing regulators (Ofcom, ICO, FCA, MHRA) to address AI in their sectors.</p>
+        </div>
+    </div>
+
+    <h3>The China side</h3>
+    <p>The 2023 Generative AI rules require pre-deployment safety review and content alignment with national-security guidelines. The 2024&ndash;2025 elaborations have added algorithmic-recommendation rules and deep-synthesis labelling. Domestic regime is restrictive on outputs and consumer-facing deployment, permissive on architecture and base models.</p>
+
+    <div class="callout y">
+        <div class="callout-label">A pattern that probably continues</div>
+        <p>Each of the three western regimes has chosen a distinctive lane (EU prescriptive, US flexible-sectoral, UK technical-evaluation). All three have settled enough by 2026 that the regulatory uncertainty discount on AI investment is meaningfully smaller than it was in 2023. The next significant change will probably be precipitated by an incident &mdash; a high-profile autonomous-action failure, a frontier-capability surprise, a security breach &mdash; rather than by orderly process.</p>
+    </div>
+</section>
+
+<section class="slide" id="slide-11">
+    <div class="slide-number">11</div>
+    <h2>AGI Timelines &mdash; Honest Disagreement</h2>
+    <p>The AGI-timeline question is the deck's most-asked-about and least-confidently-answered. The honest version is that <strong>senior people in the field disagree wildly, often along lines that correlate with their incentives</strong>, and the disagreement persists because the relevant evidence does not exist.</p>
+
+    <div class="diagram-grid cols-2">
+        <div class="diagram-panel accent-border">
+            <h4>Short timelines (2027&ndash;2030)</h4>
+            <ul>
+                <li>Sam Altman has said publicly that "AGI" by his definitions is achievable within this window.</li>
+                <li>Dario Amodei's <em>Machines of Loving Grace</em> implies roughly this range.</li>
+                <li>Shane Legg has held this position consistently for two decades.</li>
+                <li>Many AI 2027-style scenario authors (Daniel Kokotajlo et al).</li>
+            </ul>
+        </div>
+        <div class="diagram-panel y">
+            <h4>Longer timelines (2035&ndash;2050)</h4>
+            <ul>
+                <li>Yann LeCun argues current LLMs are not on the path to AGI; world-model architectures will take longer.</li>
+                <li>Many academic ML researchers and AI critics (Gary Marcus, Melanie Mitchell, others).</li>
+                <li>Most economists who have looked at the productivity-impact data carefully.</li>
+                <li>Demis Hassabis takes a middle position; serious about transformative impact in 5&ndash;10 years, sceptical of "AGI by 2027" specifics.</li>
+            </ul>
+        </div>
+    </div>
+
+    <h3>Why the disagreement persists</h3>
+    <p>The deepest reason: there is no agreed operational definition of AGI. <em>"As capable as a median human at most economically valuable tasks"</em>, <em>"can do all human cognitive labour"</em>, <em>"matches or exceeds a top human expert in any domain"</em>, <em>"recursively self-improves"</em> &mdash; these are radically different bars and forecast accordingly. Anyone offering a single date for "AGI" without a specific definition is mostly signalling disposition, not predicting.</p>
+
+    <div class="callout">
+        <div class="callout-label">What can be said with more confidence</div>
+        <p>Capability gains in narrow domains (math, code, science research) are likely to continue at a pace that produces visible economic effects within 3&ndash;5 years. Whether those effects converge on something we should call "AGI" in the next 5&ndash;10 years depends on how the agentic-action and world-model axes mature, on whether frontier alignment work scales, and on regulatory and supply-chain factors that no one fully controls. The right posture for an engineer in this field is to plan as if the technology continues to capability-improve substantially, while being honest about what is and is not known.</p>
+    </div>
+</section>
+
+<section class="slide" id="slide-12">
+    <div class="slide-number">12</div>
+    <h2>Cheat Sheet</h2>
+
+    <div class="diagram-grid cols-2">
+        <div class="diagram-panel accent-border">
+            <h4>The five axes to watch</h4>
+            <ul>
+                <li><strong>Reasoning depth.</strong> RL on chains of thought; mature.</li>
+                <li><strong>Agentic action.</strong> Mid-cycle; biggest near-term lever.</li>
+                <li><strong>World models / embodiment.</strong> Early-cycle; high uncertainty.</li>
+                <li><strong>Multimodality.</strong> Mostly consolidated; integration improvements.</li>
+                <li><strong>Specialised expertise.</strong> Domain-by-domain; uneven.</li>
+            </ul>
+        </div>
+        <div class="diagram-panel y">
+            <h4>The structural questions</h4>
+            <ul>
+                <li>Does pretraining-only scaling really plateau, or just shift axes?</li>
+                <li>Open weights vs closed: equilibrium or shift?</li>
+                <li>Does alignment scale to substantially-smarter models?</li>
+                <li>Which regulatory regime sets the global default?</li>
+                <li>How does the multipolar (US-China-Europe) frontier evolve?</li>
+            </ul>
+        </div>
+        <div class="diagram-panel g">
+            <h4>Things to flag in re-reads</h4>
+            <ul>
+                <li>The "AGI by 2027" predictions &mdash; did they age well or badly?</li>
+                <li>The "open weights catches up by 2026" claim &mdash; how close is the gap actually?</li>
+                <li>The "test-time compute is the next axis" thesis &mdash; was it the dominant driver, or was something else?</li>
+                <li>Did robotics-foundation-models actually transform anything by 2028?</li>
+            </ul>
+        </div>
+        <div class="diagram-panel r">
+            <h4>End of the series</h4>
+            <ul>
+                <li>This is the last deck. The history part of the LLM History series ends with the present.</li>
+                <li>The technical content of LLMs continues in the rest of the LLMs hub.</li>
+                <li>Two years from now, this deck should be re-read for what it got right about structure, not for what it predicted about specifics.</li>
+            </ul>
+        </div>
+    </div>
+</section>
+
+<footer class="footer">
+    <p>Part of the <a href="https://github.com/BrendanJamesLynskey/LLM_Hub_LLM_History">LLM History series</a> in the <a href="https://github.com/BrendanJamesLynskey/LLMs">LLMs hub</a>.</p>
+    <p style="margin-top: 0.5rem;"><a href="https://brendanjameslynskey.github.io/LLM_History_09_Chinese_Labs/">&larr; 09 Chinese Labs</a> &middot; <a href="https://github.com/BrendanJamesLynskey/LLM_Hub_LLM_History">Series Index &rarr;</a></p>
+</footer>
+
+</body>
+</html>
